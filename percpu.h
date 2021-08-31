@@ -43,6 +43,16 @@
 #ifndef __PERCPU_H
 #define __PERCPU_H
 
+#ifdef __linux__
+#include <linux/cpu.h>
+#else
+#include <ntddk.h>
+#endif
+
+#include "ksm.h"
+#include "compiler.h"
+
+
 static int __g_dpc_logical_rval = 0;
 
 #ifndef __linux__
@@ -87,12 +97,15 @@ NTKERNELAPI LOGICAL KeSignalCallDpcSynchronize(PVOID SystemArgument2);
 #define CALL_DPC(name, ...) do {						\
 	int cpu;								\
 	__g_dpc_logical_rval = 0;						\
-	for_each_online_cpu(cpu)						\
+	for_each_online_cpu(cpu){	 \
+		get_online_cpus();   \
 		smp_call_function_single(cpu, __percpu_##name, __VA_ARGS__, 1);	\
+		put_online_cpus(); \
+	}   \
 } while (0)
 
 #define CALL_DPC_ON_CPU(cpu, name, fail, ...) do {				\
-	__g_dpc_logical_rval = 0;						\
+	__g_dpc_logical_rval = 0;       					\
 	smp_call_function_single(cpu, __percpu_##name, __VA_ARGS__, 1);		\
 } while (0)
 #endif

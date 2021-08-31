@@ -5,6 +5,11 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <errno.h>
+#include <termios.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+
+
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,6 +26,10 @@ typedef unsigned int u32;
 #define UM
 #include "um.h"
 #include "../compiler.h"
+
+#define PAGE_SIZE 0x1000ULL
+#define PAGE_MASK (PAGE_SIZE- 1)
+#define ASM_VMX_VMFUNC		  ".byte 0x0f, 0x01, 0xd4"
 
 #ifdef _WIN32
 extern NTSTATUS NTAPI ZwDeviceIoControlFile(HANDLE h, HANDLE hEvent, PIO_APC_ROUTINE apc, void *apc_ctx,
@@ -150,6 +159,18 @@ static void print_payload(const u8 *payload, size_t len)
 	}
 }
 
+
+
+static inline u8 __vmx_vmfunc(u32 eptp, u32 func)
+{
+        u8 error;
+        __asm __volatile(ASM_VMX_VMFUNC "; setna %0"
+                         : "=q" (error) : "c" (eptp), "a" (func)
+                         : "cc");
+        return error;
+}
+
+
 int main(int ac, char *av[])
 {
 	devfd_t dev;
@@ -157,6 +178,8 @@ int main(int ac, char *av[])
 	int pid;
 	u32 cmd;
 	char c;
+	int eptp=0;
+	int fdmem;
 	struct watch_ioctl *w = malloc(sizeof(*w));
 
 	dev = open_device();
@@ -172,13 +195,66 @@ int main(int ac, char *av[])
 	}
 
 	printf("Our pid: %d\n", __get_pid());
-	printf("i = introspect, s = sandbox, q = quit\n");
+	printf("i = introspect, s = sandbox, q = quit   v=do_vmfunc\n");
 	while (1) {
 		printf("Say request> ");
 		if (!getchr(&c))
 			continue;
 
 		switch (c) {
+		case 'p':
+			__vmx_vmfunc(0,0);
+			ret = do_ioctl(dev, KSM_IOCTL_READ_VPID, NULL, 0);
+
+			__vmx_vmfunc(1,0);
+			ret = do_ioctl(dev, KSM_IOCTL_READ_VPID, NULL, 0);
+
+			__vmx_vmfunc(2,0);
+			ret = do_ioctl(dev, KSM_IOCTL_READ_VPID, NULL, 0);
+			
+			break;
+
+		case 'v':
+		fdmem=open("/dev/mem",O_RDWR |O_SYNC);
+		if (fdmem<0) {
+			printf("An error occured openning dev/mem \n");
+			goto out;
+		}
+		void* mmap_base   =  mmap(NULL ,PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fdmem, 0x42e7ff000); //0x42e7ff000
+		void* mmap_base1 = mmap(NULL ,PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fdmem,0x42e7ff000-PAGE_SIZE); //0x42e7ff000
+		//void* mmap_base2 = mmap(NULL ,PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fdmem, 0x42e801000); //0x42e7ff000
+		
+
+		//if (mmap_base==(void*)-1 || mmap_base1==(void*)-1 || mmap_base2==(void*)-1){
+		if (mmap_base==(void*)-1){
+			perror("error: ");
+			goto out; 
+			}
+		
+	for(int i=0; i<4; i++) {
+		printf("provide eptp index >  ");
+		scanf("%d",&eptp);
+
+		printf("Before @mmap_base :%p     mmap_base: %#llx \n",mmap_base,*(unsigned long long *)mmap_base);
+		memset(mmap_base1,0xbb,PAGE_SIZE);
+
+		__vmx_vmfunc((eptp-1),0);
+		//void *mmap_base1   =  mmap(NULL ,PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fdmem, 0x42e7ff000+(eptp-1)*PAGE_SIZE); 
+
+		memset(mmap_base,0xaa,PAGE_SIZE);
+		printf("eptp : %d     @mmap_base :%p     mmap_base: %#llx \n",eptp-1, mmap_base,*(unsigned long long *)mmap_base);
+
+		__vmx_vmfunc(eptp,0);
+		//void *mmap_base2   =  mmap(NULL ,PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fdmem, 0x42e7ff000+eptp*PAGE_SIZE); 
+		//memset(mmap_base,eptp,PAGE_SIZE);
+		printf("eptp : %d     @mmap_base :%p     mmap_base: %#llx \n",eptp,mmap_base,*(unsigned long long *)mmap_base);
+		
+		__vmx_vmfunc((eptp-1),0);
+		printf("eptp : %d     @mmap_base :%p     mmap_base: %#llx \n",eptp -1,mmap_base,*(unsigned long long *)mmap_base);
+	
+	}	
+		break;	
+
 		case 'q':
 			puts("Quit");
 			goto unsub;

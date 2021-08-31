@@ -69,6 +69,10 @@ static long ksm_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		ret = ksm_unbox(ksm, pid);
 		break;
 #endif
+	case KSM_IOCTL_READ_VPID:
+		KSM_DEBUG("VPID :%#16llX", ksm->vpid_ept);
+		ret =0;
+		break;
 	case KSM_IOCTL_SUBVERT:
 		if (!mm) {
 			/* Steal their mm...  */

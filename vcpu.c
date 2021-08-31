@@ -213,23 +213,30 @@ static bool setup_pml4(struct ept *ept, int access, u16 eptp)
 	 */
 	int i;
 	int mt;
-	u64 addr;
+	u64 addr, hpa, HPA_OFFSET=0;
 	u64 apic;
+	u64 *page ;
 	struct pmem_range *range;
 	struct vcpu *vcpu = container_of(ept, struct vcpu, ept);
 	struct ksm *k = vcpu_to_ksm(vcpu);
 
-	for (i = 0; i < ksm->range_count; ++i) {
+	for (i = 0; i < ksm->range_count; ++i) 
+	{
 		range = &ksm->ranges[i];
-		for (addr = range->start; addr < range->end; addr += PAGE_SIZE) {
+		for (addr = range->start; addr < range->end; addr += PAGE_SIZE) 
+		{
 			int r = access;
 			if (access != EPT_ACCESS_ALL && mm_is_kernel_addr(__va(addr)))
 				r = EPT_ACCESS_ALL;
 
 			mt = ept_memory_type(k, addr);
-			if (!ept_alloc_page(EPT4(ept, eptp), r, mt, addr, addr))
-				return false;
-		}
+			if((i==(ksm->range_count -1)) && (addr >=(range->end-PAGE_SIZE)) && (addr < range->end))
+			HPA_OFFSET= eptp*PAGE_SIZE;		
+			hpa=addr - HPA_OFFSET; 
+			page=ept_alloc_page(EPT4(ept, eptp), r, mt, addr, hpa);
+			if (!page)
+				return false;			
+		}	
 	}
 
 	/* Allocate APIC page  */
@@ -355,12 +362,19 @@ static bool do_ept_violation(struct ept_ve_around *ve)
 	struct ept *ept = &vcpu->ept;
 	struct ksm *k = vcpu_to_ksm(vcpu);
 	struct ve_except_info *info = ve->info;
+	struct pmem_range *range;
 	int mt;
+	u64 HPA_OFFSET=0,hpa;
 
 	if ((info->exit & EPT_VE_RWX) == 0) {	/* no access  */
 		mt = ept_memory_type(k, info->gpa);
+		range=&k->ranges[k->range_count -1];
+		if((info->gpa >=(range->end-PAGE_SIZE)) && (info->gpa < range->end))
+			 HPA_OFFSET= (info->eptp)*PAGE_SIZE;		 
+		hpa = (info->gpa - HPA_OFFSET);
+
 		if (!ept_alloc_page(EPT4(ept, info->eptp),
-				    EPT_ACCESS_ALL, mt, info->gpa, info->gpa))
+				    EPT_ACCESS_ALL, mt, info->gpa, hpa))
 			return false;
 
 		return true;
@@ -610,8 +624,9 @@ void vcpu_run(struct vcpu *vcpu, uintptr_t gsp, uintptr_t gip)
 	adjust_ctl_val(MSR_IA32_VMX_EXIT_CTLS + msr_off, &vm_exit);
 	vcpu->exit_ctl = vm_exit;
 
-	/* Pin controls (external interrupts, etc.)  */
-	u32 vm_pinctl = PIN_BASED_POSTED_INTR;
+	/* Pin controls (external interrupts, etc.). Causes the processor 
+	to exit each time it delivers an external interrupt (mouse, keyboard ...)  */
+	u32 vm_pinctl = 0; //PIN_BASED_POSTED_INTR;
 	adjust_ctl_val(MSR_IA32_VMX_PINBASED_CTLS + msr_off, &vm_pinctl);
 	vcpu->pin_ctl = vm_pinctl;
 
@@ -619,7 +634,7 @@ void vcpu_run(struct vcpu *vcpu, uintptr_t gsp, uintptr_t gip)
 	const u32 req_cpuctl = CPU_BASED_ACTIVATE_SECONDARY_CONTROLS | CPU_BASED_USE_MSR_BITMAPS |
 		CPU_BASED_USE_IO_BITMAPS
 #ifdef PMEM_SANDBOX
-		| CPU_BASED_CR3_LOAD_EXITING
+	//	| CPU_BASED_CR3_LOAD_EXITING
 #endif
 		;
 	u32 vm_cpuctl = req_cpuctl
@@ -661,7 +676,7 @@ void vcpu_run(struct vcpu *vcpu, uintptr_t gsp, uintptr_t gip)
 #ifndef __linux__
 	if (!KD_DEBUGGER_ENABLED || KD_DEBUGGER_NOT_PRESENT)
 #endif
-		vm_2ndctl |= SECONDARY_EXEC_DESC_TABLE_EXITING;
+		vm_2ndctl |= 0;  //SECONDARY_EXEC_DESC_TABLE_EXITING; This leads to exit 47
 	adjust_ctl_val(MSR_IA32_VMX_PROCBASED_CTLS2, &vm_2ndctl);
 	vcpu->secondary_ctl = vm_2ndctl;
 

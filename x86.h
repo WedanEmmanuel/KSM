@@ -619,7 +619,7 @@ static inline void _xsetbv(u32 index, u64 value)
 	__asm __volatile(".byte 0x0f,0x01,0xd1"
 			 :: "a" (eax), "d" (edx), "c" (index));
 }
-
+#if 1
 static inline void __cpuidex(int *ret, int func, int subf)
 {
 	__asm __volatile("xchgq %%rbx, %%rdi\n\t"
@@ -628,6 +628,18 @@ static inline void __cpuidex(int *ret, int func, int subf)
 			 : "=a" (ret[0]), "=D" (ret[1]), "=c" (ret[2]), "=d"(ret[3])
 			 : "a" (func), "c" (subf));
 }
+#endif 
+#if 0
+static inline void __cpuidex(int *ret, int func, int subf)
+{
+	__asm __volatile("XCHG %%rbx, %%rdi\n\t"
+			 "cpuid\n\t"
+			 "XCHG %%rbx, %%rdi\n\t"
+			 : "=a" (ret[0]), "=D" (ret[1]), "=c" (ret[2]), "=d"(ret[3])
+			 : "a" (func), "c" (subf));
+}
+#endif 
+
 
 static inline u64 __lar(u64 sel)
 {

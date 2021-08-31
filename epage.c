@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License along with
  * this program; If not, see <http://www.gnu.org/licenses/>.
 */
-#ifdef EPAGE_HOOK
 #ifdef __linux__
 #include <linux/kernel.h>
 #else
@@ -26,6 +25,8 @@
 
 #include "ksm.h"
 #include "percpu.h"
+
+#ifdef EPAGE_HOOK
 
 /*!
  * To use this interface, call ksm_hook_epage() on the target function,

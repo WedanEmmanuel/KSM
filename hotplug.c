@@ -36,8 +36,8 @@ static int ksm_hotplug_cpu(struct notifier_block *nfb, unsigned long action, voi
 		put_online_cpus();
 		break;
 	case CPU_DOWN_PREPARE:
-	case CPU_DYING:
-	case CPU_DYING_FROZEN:
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
 		smp_call_function_single(cpu, do_cpu, __ksm_exit_cpu, 1);
 		break;
 	}

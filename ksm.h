@@ -29,6 +29,11 @@
 #include "mm.h"
 #include "bitmap.h"
 
+
+#define EPAGE_HOOK
+#define INTROSPECT_ENGINE
+#define PMEM_SANDBOX
+
 #define KSM_MAX_VCPUS		32
 #define __EXCEPTION_BITMAP	0
 

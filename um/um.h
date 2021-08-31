@@ -36,6 +36,7 @@ struct watch_ioctl {
 #define KSM_IOCTL_INTRO_WATCH	_IOW(KSM_DEVICE_MAGIC, 6, struct watch_ioctl)
 #define KSM_IOCTL_INTRO_UNWATCH	_IOW(KSM_DEVICE_MAGIC, 7, struct watch_ioctl)
 #define KSM_IOCTL_INTRO_STATS	_IOWR(KSM_DEVICE_MAGIC, 8, struct watch_ioctl)
+#define KSM_IOCTL_READ_VPID     _IO(KSM_DEVICE_MAGIC, 9)
 #else
 #define UM_DEVICE_NAME		L"ksm"
 #define UM_DEVICE_PATH		L"\\\\.\\" UM_DEVICE_NAME

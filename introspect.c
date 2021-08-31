@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program; If not, see <http://www.gnu.org/licenses/>.
  */
-#ifdef INTROSPECT_ENGINE
+
 #ifdef __linux__
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -27,6 +27,8 @@
 #include "ksm.h"
 #include "percpu.h"
 #include "um/um.h"
+
+#ifdef INTROSPECT_ENGINE
 
 #define INTROSPECT_WATCH	1
 #define INTROSPECT_UNWATCH	2

@@ -105,15 +105,23 @@ static inline void init_io_bitmaps(struct ksm *k)
  */
 int __ksm_init_cpu(struct ksm *k)
 {
+	/*spinlock_t SPIN;
+	unsigned long LOCKFLAGS=0;
+	spin_lock_irq(&SPIN);
+	*/
+	
 	struct vcpu *vcpu;
 	int ret = ERR_NOMEM;
 	u64 feat_ctl;
+	//get_online_cpus();
 	u64 required_feat_bits = FEATURE_CONTROL_LOCKED |
 		FEATURE_CONTROL_VMXON_ENABLED_OUTSIDE_SMX;
 
 	vcpu = ksm_cpu(k);
 	if (vcpu->subverted) {
 		KSM_DEBUG_RAW("CPU already subverted\n");
+		//spin_unlock_irq(&SPIN);
+		//put_online_cpus();
 		return 0;
 	}
 
@@ -124,35 +132,48 @@ int __ksm_init_cpu(struct ksm *k)
 
 	feat_ctl = __readmsr(MSR_IA32_FEATURE_CONTROL);
 	if ((feat_ctl & required_feat_bits) != required_feat_bits) {
-		if (feat_ctl & FEATURE_CONTROL_LOCKED)
+		if (feat_ctl & FEATURE_CONTROL_LOCKED){
+			//spin_unlock_irq(&SPIN);
+			//put_online_cpus();
 			return ERR_BUSY;
+		}
 
 		__writemsr(MSR_IA32_FEATURE_CONTROL, feat_ctl | required_feat_bits);
 		feat_ctl = __readmsr(MSR_IA32_FEATURE_CONTROL);
-		if ((feat_ctl & required_feat_bits) != required_feat_bits)
+		if ((feat_ctl & required_feat_bits) != required_feat_bits){
+			//spin_unlock_irq(&SPIN);
+			//put_online_cpus();
 			return ERR_DENIED;
+			}
 	}
 
 	ret = vcpu_init(vcpu);
 	if (ret < 0) {
 		KSM_DEBUG_RAW("failed to create vcpu, oom?\n");
-		return ret;
-	}
+		//spin_unlock_irq(&SPIN);
+		//put_online_cpus();
+		
+				return ret;
+		}
 
 	/* Saves state and calls vcpu_run() (Defined in assembly, vmx.{S,asm} */
 	ret = __vmx_vminit(vcpu);
-	KSM_DEBUG("%s: Started: %d\n", proc_name(), !ret);
+	//KSM_DEBUG("%s: Started: %d\n", proc_name(), !ret);
 
 	if (ret < 0)
 		goto out;
 
 	vcpu->subverted = true;
 	k->active_vcpus++;
+	//spin_unlock_irq(&SPIN);
+	//put_online_cpus();
 	return 0;
 
 out:
 	vcpu_free(vcpu);
 	__writecr4(__readcr4() & ~X86_CR4_VMXE);
+	//spin_unlock_irq(&SPIN);
+	//put_online_cpus();
 	return ret;
 }
 

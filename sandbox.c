@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program; If not, see <http://www.gnu.org/licenses/>.
 */
-#ifdef PMEM_SANDBOX
+
 #ifdef __linux__
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -29,6 +29,8 @@
 #include "ksm.h"
 #include "mm.h"
 #include "percpu.h"
+
+#ifdef PMEM_SANDBOX
 
 /*
  * Note #1:
