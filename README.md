@@ -74,3 +74,7 @@ things as required.
 
 GPL v2, see LICENSE file.  Note that some code is thirdparty, respective
 licenses and/or copyright should be there, if you think otherwise, feel free to mail me.
+
+
+## Original repo
+[https://github.com/asamy/ksm](https://github.com/asamy/ksm]
