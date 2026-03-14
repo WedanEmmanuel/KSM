@@ -76,5 +76,6 @@ GPL v2, see LICENSE file.  Note that some code is thirdparty, respective
 licenses and/or copyright should be there, if you think otherwise, feel free to mail me.
 
 
-## Original repo
-[https://github.com/asamy/ksm](https://github.com/asamy/ksm]
+## Source repository
+- The original KSM project was released in [https://github.com/asamy/ksm](https://github.com/asamy/ksm). 
+- The current proeject is an improvement, resolving compilation bugs
