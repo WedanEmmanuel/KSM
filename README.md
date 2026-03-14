@@ -78,4 +78,4 @@ licenses and/or copyright should be there, if you think otherwise, feel free to 
 
 ## Source repository
 - The original KSM project was released in [https://github.com/asamy/ksm](https://github.com/asamy/ksm). 
-- The current proeject is an improvement, resolving compilation bugs
+- The current project is an improvement, resolving compilation bugs
